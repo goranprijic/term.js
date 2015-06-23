@@ -1340,6 +1340,20 @@ Terminal.prototype.refresh = function(start, end) {
   if (parent) parent.appendChild(this.element);
 };
 
+Terminal.prototype.measureCharacter = function () {
+  if (!this._measurer) {
+    this._measurer = document.createElement('div');
+    this.element.appendChild(this._measurer);
+    this._measurer.innerHTML = '&nbsp;';
+    this._measurer.style.cssText = 'position: absolute; opacity: 0; top: -1000px; pointer-events: none';
+  }
+
+  return {
+    width: this._measurer.offsetWidth,
+    height: this._measurer.offsetHeight
+  };
+};
+
 Terminal.prototype._cursorBlink = function() {
   if (Terminal.focus !== this) return;
   this.cursorState ^= 1;
