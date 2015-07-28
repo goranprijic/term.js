@@ -1135,16 +1135,26 @@ Terminal.prototype.bindMouse = function() {
     return cancel(ev);
   });
 
-  // allow mousewheel scrolling in
-  // the shell for example
+  // scrolling happens in an integer number of lines, so we track the amount
+  // scrolled as a floating point, then round that down to compute the number of
+  // lines to scroll in a given event
+  var scrollDelta = 0;
+
+  // scrollFactor controls the speed we scroll at
+  var scrollFactor = 1 / 5;
+
   on(el, wheelEvent, function(ev) {
     if (self.mouseEvents) return;
     if (self.applicationKeypad) return;
     if (ev.type === 'DOMMouseScroll') {
       self.scrollDisp(ev.detail < 0 ? -5 : 5);
     } else {
-      self.scrollDisp(ev.wheelDeltaY > 0 ? -5 : 5);
+      scrollDelta += -ev.wheelDeltaY * scrollFactor;
+      var numLines = scrollDelta | 0;
+      scrollDelta -= numLines;
+      self.scrollDisp(numLines);
     }
+
     return cancel(ev);
   });
 };
