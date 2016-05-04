@@ -1200,20 +1200,20 @@ Terminal.prototype.bindMouse = function() {
   // scrollFactor controls the speed we scroll at
   var scrollFactor = 1 / 5;
 
-  on(el, wheelEvent, function(ev) {
-    if (self.mouseEvents) return;
-    if (self.applicationKeypad) return;
-    if (ev.type === 'DOMMouseScroll') {
-      self.scrollDisp(ev.detail < 0 ? -5 : 5);
-    } else {
-      scrollDelta += -ev.wheelDeltaY * scrollFactor;
-      var numLines = scrollDelta | 0;
-      scrollDelta -= numLines;
-      self.scrollDisp(numLines);
-    }
-
-    return cancel(ev);
-  });
+  //on(el, wheelEvent, function(ev) {
+  //  if (self.mouseEvents) return;
+  //  if (self.applicationKeypad) return;
+  //  if (ev.type === 'DOMMouseScroll') {
+  //    self.scrollDisp(ev.detail < 0 ? -5 : 5);
+  //  } else {
+  //    scrollDelta += -ev.wheelDeltaY * scrollFactor;
+  //    var numLines = scrollDelta | 0;
+  //    scrollDelta -= numLines;
+  //    self.scrollDisp(numLines);
+  //  }
+  //
+  //  return cancel(ev);
+  //});
 };
 
 /**
@@ -1295,7 +1295,7 @@ Terminal.prototype.refresh = function(start, end) {
   }
 
   for (; y <= end; y++) {
-    row = y + this.ydisp;
+    row = y; // + this.ydisp;
 
     line = this.lines[row];
     out = '';
@@ -1418,6 +1418,10 @@ Terminal.prototype.refresh = function(start, end) {
 
     if (attr !== this.defAttr) {
       out += '</span>';
+    }
+
+    if (typeof this.children[y] == "undefined") {
+      this._addChild();
     }
 
     this.children[y].innerHTML = out;
@@ -1567,7 +1571,7 @@ Terminal.prototype.write = function(data) {
             // this.realX = 0;
             this.y++;
             if (this.y > this.scrollBottom) {
-              this.y--;
+              //this.y--;
               this.scroll();
             }
             break;
@@ -1615,9 +1619,16 @@ Terminal.prototype.write = function(data) {
                 this.x = 0;
                 this.y++;
                 if (this.y > this.scrollBottom) {
-                  this.y--;
+                  //this.y--;
                   this.scroll();
                 }
+              }
+
+              if (this.lines.length < this.y + this.ybase + 1) {
+                this.lines.push(this.blankLine());
+              }
+              if (this.children.length < this.y) {
+                this._addChild();
               }
 
               this.lines[this.y + this.ybase][this.x] = [this.curAttr, ch];
@@ -3137,6 +3148,12 @@ Terminal.prototype.handleTitle = function(title) {
   this.emit('title', title);
 };
 
+Terminal.prototype._addChild = function() {
+  var newline = this.document.createElement('div');
+  this.element.appendChild(newline);
+  this.children.push(newline);
+}
+
 /**
  * ESC
  */
@@ -3145,7 +3162,7 @@ Terminal.prototype.handleTitle = function(title) {
 Terminal.prototype.index = function() {
   this.y++;
   if (this.y > this.scrollBottom) {
-    this.y--;
+    //this.y--;
     this.scroll();
   }
   this.state = normal;
