@@ -2956,7 +2956,8 @@
   };
 
   Terminal.prototype.resize = function(x, y) {
-    var i
+    var el
+      , i
       , j
       , ch;
 
@@ -2978,7 +2979,43 @@
     this.setupStops(j);
     this.cols = x;
     this.columns = x;
+
+    // resize rows
+    j = this.rows;
+    if (j < y) {
+      // insert blank lines
+      while (j++ < y) {
+        if (this.lines.length < y + this.ybase) {
+          this.lines.push(this.blankLine());
+        }
+        if (this.children.length < y) {
+          this._addChild();
+        }
+      }
+    } else if (j > y) {
+      // remove blank lines from end
+      while (j-- > y) {
+        if (!this.isBlankLine(this.lines[j])) {
+          break;
+        }
+        if (this.lines.length > y + this.ybase) {
+          this.lines.pop();
+        }
+        if (this.children.length > y) {
+          el = this.children.pop();
+          if (!el) continue;
+          el.parentNode.removeChild(el);
+        }
+      }
+    }
     this.rows = this.lines.length;
+
+    // make sure the cursor stays on screen
+    if (this.y >= y) this.y = y - 1;
+    if (this.x >= x) this.x = x - 1;
+
+    this.scrollTop = 0;
+    this.scrollBottom = y - 1;
 
     this.refresh(0, this.rows - 1);
 
@@ -3085,6 +3122,18 @@
     }
 
     return line;
+  };
+
+  Terminal.prototype.isBlankLine = function (line) {
+    var i;
+
+    for (i = 0; i < line.length; i++) {
+      if (line[i][1] != " ") {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   Terminal.prototype.ch = function(cur) {
