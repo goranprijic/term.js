@@ -3011,7 +3011,7 @@
     this.rows = this.lines.length;
 
     // make sure the cursor stays on screen
-    if (this.y >= y) this.y = y - 1;
+    if (this.y >= this.lines.length) this.y = this.lines.length - 1;
     if (this.x >= x) this.x = x - 1;
 
     this.scrollTop = 0;
