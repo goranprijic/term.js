@@ -238,6 +238,8 @@
     this.isRaw = true;
     this.columns = this.cols;
     this.rows = this.rows;
+    this.originalRows = this.rows;
+    this.nativeScroll = 'nativeScroll' in options ? options.nativeScroll : true;
 
     if (options.handler) {
       this.on('data', options.handler);
@@ -1200,20 +1202,21 @@
     // scrollFactor controls the speed we scroll at
     var scrollFactor = 1 / 5;
 
-    //on(el, wheelEvent, function(ev) {
-    //  if (self.mouseEvents) return;
-    //  if (self.applicationKeypad) return;
-    //  if (ev.type === 'DOMMouseScroll') {
-    //    self.scrollDisp(ev.detail < 0 ? -5 : 5);
-    //  } else {
-    //    scrollDelta += -ev.wheelDeltaY * scrollFactor;
-    //    var numLines = scrollDelta | 0;
-    //    scrollDelta -= numLines;
-    //    self.scrollDisp(numLines);
-    //  }
-    //
-    //  return cancel(ev);
-    //});
+    on(el, wheelEvent, function(ev) {
+      if (self.nativeScroll) return;
+      if (self.mouseEvents) return;
+      if (self.applicationKeypad) return;
+      if (ev.type === 'DOMMouseScroll') {
+        self.scrollDisp(ev.detail < 0 ? -5 : 5);
+      } else {
+        scrollDelta += -ev.wheelDeltaY * scrollFactor;
+        var numLines = scrollDelta | 0;
+        scrollDelta -= numLines;
+        self.scrollDisp(numLines);
+      }
+
+      return cancel(ev);
+    });
   };
 
   /**
@@ -1295,7 +1298,7 @@
     }
 
     for (; y <= end; y++) {
-      row = y; // + this.ydisp;
+      row = y + (!this.nativeScroll ? this.ydisp : 0);
 
       line = this.lines[row];
       out = '';
@@ -1571,7 +1574,7 @@
               // this.realX = 0;
               this.y++;
               if (this.y > this.scrollBottom) {
-                //this.y--;
+                if (!this.nativeScroll) this.y--;
                 this.scroll();
               }
               break;
@@ -1619,13 +1622,16 @@
                   this.x = 0;
                   this.y++;
                   if (this.y > this.scrollBottom) {
-                    //this.y--;
+                    if (!this.nativeScroll) this.y--;
                     this.scroll();
                   }
                 }
 
                 if (this.lines.length < this.y + this.ybase + 1) {
                   this.lines.push(this.blankLine());
+                  if (this.nativeScroll) {
+                    this.rows = this.lines.length;
+                  }
                 }
                 if (this.children.length < this.y) {
                   this._addChild();
@@ -2995,7 +3001,7 @@
     } else if (j > y) {
       // remove blank lines from end
       while (j-- > y) {
-        if (!this.isBlankLine(this.lines[j])) {
+        if (this.nativeScroll && !this.isBlankLine(this.lines[j])) {
           break;
         }
         if (this.lines.length > y + this.ybase) {
@@ -3008,10 +3014,14 @@
         }
       }
     }
-    this.rows = this.lines.length;
+    this.originalRows = y;
+    if (this.nativeScroll) {
+      y = this.lines.length;
+    }
+    this.rows = y;
 
     // make sure the cursor stays on screen
-    if (this.y >= this.lines.length) this.y = this.lines.length - 1;
+    if (this.y >= y) this.y = y - 1;
     if (this.x >= x) this.x = x - 1;
 
     this.scrollTop = 0;
@@ -3155,10 +3165,30 @@
     this.emit('title', title);
   };
 
-  Terminal.prototype._addChild = function() {
-    var newline = this.document.createElement('div');
-    this.element.appendChild(newline);
-    this.children.push(newline);
+  Terminal.prototype._addChild = function(line) {
+    if (!line) {
+      var line = this.document.createElement('div');
+    }
+
+    this.element.appendChild(line);
+    this.children.push(line);
+  }
+
+  Terminal.prototype._removeChildren = function() {
+    var el;
+
+    while (this.children.length) {
+      el = this.children.pop();
+      if (!el) continue;
+      el.parentNode.removeChild(el);
+    }
+  }
+
+  Terminal.prototype._restoreChildren = function(children) {
+    this._removeChildren();
+    while (children.length) {
+      this._addChild(children.shift());
+    }
   }
 
   /**
@@ -3169,7 +3199,7 @@
   Terminal.prototype.index = function() {
     this.y++;
     if (this.y > this.scrollBottom) {
-      //this.y--;
+      if (!this.nativeScroll) this.y--;
       this.scroll();
     }
     this.state = normal;
@@ -3196,8 +3226,10 @@
 
 // ESC c Full Reset (RIS).
   Terminal.prototype.reset = function() {
-    this.options.rows = this.rows;
+    this.options.rows = this.originalRows;
     this.options.cols = this.cols;
+    this.lines = [];
+    this._removeChildren();
     Terminal.call(this, this.options);
     this.refresh(0, this.rows - 1);
   };
@@ -4037,18 +4069,24 @@
           if (!this.normal) {
             var normal = {
               lines: this.lines,
+              children: this.children,
               ybase: this.ybase,
               ydisp: this.ydisp,
               x: this.x,
               y: this.y,
+              cols: this.cols,
+              rows: this.rows,
               scrollTop: this.scrollTop,
               scrollBottom: this.scrollBottom,
-              tabs: this.tabs
+              tabs: this.tabs,
+              nativeScroll: this.nativeScroll
               // XXX save charset(s) here?
               // charset: this.charset,
               // glevel: this.glevel,
               // charsets: this.charsets
             };
+
+            this.options.nativeScroll = false;
             this.reset();
             this.normal = normal;
             this.showCursor();
@@ -4221,6 +4259,10 @@
             this.scrollTop = this.normal.scrollTop;
             this.scrollBottom = this.normal.scrollBottom;
             this.tabs = this.normal.tabs;
+            this.cols = this.normal.cols;
+            this.rows = this.lines.length;
+            this.nativeScroll = this.normal.nativeScroll;
+            this._restoreChildren(this.normal.children);
             this.normal = null;
             // if (params === 1049) {
             //   this.x = this.savedX;
@@ -4228,6 +4270,7 @@
             // }
             this.refresh(0, this.rows - 1);
             this.showCursor();
+            this.scroll();
           }
           break;
       }
