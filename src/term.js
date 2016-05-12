@@ -1627,13 +1627,13 @@
                   }
                 }
 
-                if (this.lines.length < this.y + this.ybase + 1) {
+                while (this.lines.length < this.y + this.ybase + 1) {
                   this.lines.push(this.blankLine());
                   if (this.nativeScroll) {
                     this.rows = this.lines.length;
                   }
                 }
-                if (this.children.length < this.y) {
+                while (this.children.length < this.y) {
                   this._addChild();
                 }
 
