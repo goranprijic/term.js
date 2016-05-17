@@ -1057,17 +1057,22 @@
     if (ev.pageX == null) return;
 
     x = ev.pageX;
-    y = ev.pageY;
+    y = self.nativeScroll ? ev.layerY : ev.pageY;
     el = self.element;
 
     x -= el.clientLeft;
-    y -= el.clientTop;
+
+    if (!self.nativeScroll) {
+      y -= el.clientTop;
+    }
 
     // should probably check offsetParent
     // but this is more portable
     while (el && el !== self.document.documentElement) {
       x -= el.offsetLeft;
-      y -= el.offsetTop;
+      if (!self.nativeScroll) {
+        y -= el.offsetTop;
+      }
       el = 'offsetParent' in el
         ? el.offsetParent
         : el.parentNode;
@@ -1075,7 +1080,7 @@
 
     // convert to cols/rows
     w = self.element.clientWidth;
-    h = self.element.clientHeight;
+    h = self.nativeScroll ? self.element.scrollHeight : self.element.clientHeight;
     var cols = Math.floor((x / w) * self.cols);
     var rows = Math.floor((y / h) * self.rows);
 
