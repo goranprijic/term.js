@@ -4260,7 +4260,7 @@
             this.scrollBottom = this.normal.scrollBottom;
             this.tabs = this.normal.tabs;
             this.cols = this.normal.cols;
-            this.rows = this.lines.length;
+            this.rows = this.normal.rows;
             this.nativeScroll = this.normal.nativeScroll;
             this._restoreChildren(this.normal.children);
             this.normal = null;
